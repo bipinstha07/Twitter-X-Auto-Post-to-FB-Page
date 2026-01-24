@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X post Auto to Fb</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      width: 400px;
+      max-height: 600px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      overflow-y: auto;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 15px 0;
+      color: #1d9bf0;
+    }
+    p {
+      font-size: 14px;
+      color: #536471;
+      line-height: 1.5;
+      margin: 0 0 15px 0;
+    }
+    .status {
+      padding: 10px;
+      background: #f7f9f9;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #0f1419;
+      margin-bottom: 15px;
+    }
+    .status.active {
+      background: #d4edda;
+      color: #155724;
+    }
+    .tweet-data {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f7f9f9;
+      border-radius: 8px;
+      border: 1px solid #eff3f4;
+    }
+    .tweet-data h2 {
+      font-size: 14px;
+      margin: 0 0 10px 0;
+      color: #0f1419;
+      font-weight: 600;
+    }
+    .tweet-text {
+      font-size: 8px;
+      color: #0f1419;
+      line-height: 1.5;
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .tweet-meta {
+      font-size: 12px;
+      color: #536471;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eff3f4;
+    }
+    .images-container {
+      margin-bottom: 15px;
+    }
+    .images-container h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f1419;
+      margin: 0 0 8px 0;
+    }
+    .image-item {
+      margin-bottom: 8px;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #eff3f4;
+    }
+    .image-item img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .image-url {
+      font-size: 11px;
+      color: #536471;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+    .video-container {
+      margin-bottom: 15px;
+    }
+    .video-container h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f1419;
+      margin: 0 0 8px 0;
+    }
+    .video-item {
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #eff3f4;
+    }
+    .video-url {
+      font-size: 11px;
+      color: #536471;
+      word-break: break-all;
+    }
+    .no-data {
+      text-align: center;
+      padding: 20px;
+      color: #536471;
+      font-size: 13px;
+    }
+    .clear-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      width: 100%;
+    }
+    .clear-btn:hover {
+      background: #dc2626;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐦 X post Auto to Fb</h1>
+  <p>Click "Submit" on any tweet to see its data here.</p>
+  
+  <div class="status" id="status">
+    Extension is active
+  </div>
+
+  <div id="tweetDisplay" class="no-data">
+    No tweet data submitted yet. Click "Submit" on a tweet to see its data here.
+  </div>
+
+  <script>
+    function displayTweetData(tweetData) {
+      const container = document.getElementById('tweetDisplay');
+      
+      if (!tweetData) {
+        container.innerHTML = '<div class="no-data">No tweet data submitted yet. Click "Submit" on a tweet to see its data here.</div>';
+        container.className = 'no-data';
+        return;
+      }
+
+      container.className = 'tweet-data';
+      
+      let html = `
+        <h2>📝 Submitted Tweet Data</h2>
+        <div class="tweet-meta">
+          <strong>Submitted:</strong> ${tweetData.submittedAt || 'Unknown'}
+        </div>
+        <div class="tweet-text">
+          <strong>Text:</strong><br>
+          ${tweetData.text || '(No text)'}
+        </div>
+      `;
+
+      // Display images
+      if (tweetData.images && tweetData.images.length > 0) {
+        html += `
+          <div class="images-container">
+            <h3>🖼️ Images (${tweetData.images.length}):</h3>
+        `;
+        tweetData.images.forEach((imgUrl, index) => {
+          html += `
+            <div class="image-item">
+              <strong>Image ${index + 1}:</strong>
+              <div class="image-url">${imgUrl}</div>
+              <img src="${imgUrl}" alt="Tweet image ${index + 1}" onerror="this.style.display='none'" />
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      // Display video
+      if (tweetData.video) {
+        html += `
+          <div class="video-container">
+            <h3>🎥 Video:</h3>
+            <div class="video-item">
+              <div class="video-url">${tweetData.video}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      html += `
+        <button class="clear-btn" id="clearBtn">Clear Data</button>
+      `;
+
+      container.innerHTML = html;
+
+      // Add clear button functionality
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        chrome.storage.local.remove('lastSubmittedTweet', () => {
+          displayTweetData(null);
+        });
+      });
+    }
+
+    // Load and display stored tweet data
+    function loadTweetData() {
+      chrome.storage.local.get(['lastSubmittedTweet'], (result) => {
+        if (result.lastSubmittedTweet) {
+          displayTweetData(result.lastSubmittedTweet);
+        } else {
+          displayTweetData(null);
+        }
+      });
+    }
+
+    // Load data when popup opens
+    loadTweetData();
+
+    // Check if we're on Twitter/X
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const url = tabs[0].url;
+      if (url && (url.includes('twitter.com') || url.includes('x.com'))) {
+        document.getElementById('status').textContent = 'Extension is active on this page';
+        document.getElementById('status').classList.add('active');
+      } else {
+        document.getElementById('status').textContent = 'Please navigate to Twitter/X to use this extension';
+      }
+    });
+
+    // Refresh data when popup opens (in case it was updated)
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.lastSubmittedTweet) {
+        displayTweetData(changes.lastSubmittedTweet.newValue);
+      }
+    });
+  </script>
+</body>
+</html>

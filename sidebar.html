@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X Post Collector Auto FB Post</title>
+  <style>
+    :root {
+      --primary-blue: #1d9bf0;
+      --fb-blue: #1877f2;
+      --bg-white: #ffffff;
+      --bg-gray: #f7f9f9;
+      --text-main: #0f1419;
+      --text-gray: #536471;
+      --border-color: #eff3f4;
+      --success-green: #00ba7c;
+      --error-red: #f4212e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100%;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-white);
+      color: var(--text-main);
+      line-height: 1.4;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 99px;
+      background: var(--bg-gray);
+      color: var(--text-gray);
+      margin-bottom: 20px;
+      display: inline-block;
+      border: 1px solid var(--border-color);
+    }
+
+    .status.active {
+      background: rgba(0, 186, 124, 0.1);
+      color: var(--success-green);
+      border-color: rgba(0, 186, 124, 0.2);
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-gray);
+      font-size: 14px;
+      background: var(--bg-gray);
+      border-radius: 12px;
+      border: 1px dashed var(--border-color);
+    }
+
+    .tweet-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-gray);
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .tweet-text {
+      font-size: 11.5px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .meta-info {
+      font-size: 12px;
+      color: var(--text-gray);
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .path-badge {
+      background: #e8f5fd;
+      color: var(--primary-blue);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      word-break: break-all;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .media-item {
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      aspect-ratio: 1;
+      background: var(--bg-gray);
+    }
+
+    .media-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-gray);
+      background: var(--bg-gray);
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    button {
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 16px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-clear {
+      background: var(--bg-gray);
+      color: var(--text-main);
+      flex: 1;
+    }
+
+    .btn-clear:hover {
+      background: #edefef;
+    }
+
+    .btn-facebook {
+      background: var(--fb-blue);
+      color: white;
+      flex: 2;
+    }
+
+    .btn-facebook:hover {
+      background: #166fe5;
+    }
+
+    .btn-facebook:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #fbStatus {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d1d9dd;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>  
+  <div class="status" id="status">
+    Checking X connection...
+  </div>
+
+  <div id="tweetDisplay" class="no-data">
+    No tweets collected yet.<br>Click "Preview" on any post to start.
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

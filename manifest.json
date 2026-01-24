@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "X post Auto to Fb",
+  "version": "1.0",
+  "description": "Collect X posts and automatically post them to Facebook",
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel", "downloads"],
+  "host_permissions": ["https://twitter.com/*", "https://x.com/*", "https://graph.facebook.com/*", "https://snaptwitt.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://twitter.com/*", "https://x.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://snaptwitt.com/*"],
+      "js": ["snaptwitt-worker.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "public/vite.svg",
+      "48": "public/vite.svg",
+      "128": "public/vite.svg"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "icons": {
+    "16": "public/vite.svg",
+    "48": "public/vite.svg",
+    "128": "public/vite.svg"
+  }
+}
