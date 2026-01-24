@@ -1,5 +1,8 @@
 // Sidebar script for X post Auto to Fb
 
+// Global state for uploaded video to survive refreshes
+let uploadedVideoData = null;
+
 // Mark sidebar as open and establish heartbeat
 chrome.storage.local.set({ sidebarOpen: true });
 
@@ -55,7 +58,7 @@ function displayTweetData(tweetData) {
   `;
 
   // Display media if present
-  if ((tweetData.images && tweetData.images.length > 0) || tweetData.video) {
+  if ((tweetData.images && tweetData.images.length > 0) || tweetData.video || tweetData.hasVideo) {
     html += `<div class="section-label">Media</div>`;
     
     if (tweetData.images && tweetData.images.length > 0) {
@@ -109,6 +112,16 @@ function displayTweetData(tweetData) {
         </div>
       `;
     }
+
+    if (tweetData.video || tweetData.hasVideo) {
+      html += `
+        <div class="upload-section">
+          <label class="upload-label">Upload Video for Facebook:</label>
+          <input type="file" id="localVideoUpload" accept="video/*">
+          <video id="localVideoPreview" class="video-preview-local" controls style="${uploadedVideoData ? 'display:block;' : 'display:none;'}"></video>
+        </div>
+      `;
+    }
   }
 
   html += `
@@ -122,13 +135,38 @@ function displayTweetData(tweetData) {
 
   container.innerHTML = html;
 
+  // Local Video Upload Logic
+  const uploadInput = document.getElementById('localVideoUpload');
+  const localPreview = document.getElementById('localVideoPreview');
+  
+  // Restore preview if data exists
+  if (uploadedVideoData && localPreview) {
+    localPreview.src = uploadedVideoData;
+  }
+
+  if (uploadInput) {
+    uploadInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          uploadedVideoData = event.target.result;
+          localPreview.src = uploadedVideoData;
+          localPreview.style.display = 'block';
+          console.log('Local video uploaded and ready for FB post');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   // Video error handling
   const videoElement = document.getElementById('previewVideo');
   const errorOverlay = document.getElementById('videoError');
   if (videoElement && errorOverlay) {
     videoElement.onerror = () => {
       errorOverlay.style.display = 'flex';
-      errorOverlay.innerText = 'Unable to play this source. Click "Open URL" or "SnapTwitt" to download manually.';
+      errorOverlay.innerText = 'Unable to play this source. Please upload the downloaded video below.';
     };
   }
 
@@ -144,13 +182,17 @@ function displayTweetData(tweetData) {
     status.style.background = '#f0f2f5';
     status.style.color = '#536471';
 
+    // Use uploaded video if available, otherwise use original video URL
+    const finalVideoUrl = uploadedVideoData || tweetData.video || null;
+    const isBlob = uploadedVideoData ? true : (tweetData.videoIsBlob || false);
+
     chrome.runtime.sendMessage({
       type: 'POST_TO_FACEBOOK',
       payload: {
         message: tweetData.text,
         imageUrls: tweetData.images && tweetData.images.length > 0 ? tweetData.images : [],
-        videoUrl: tweetData.video || null,
-        videoIsBlob: tweetData.videoIsBlob || false
+        videoUrl: finalVideoUrl,
+        videoIsBlob: isBlob
       }
     }, (response) => {
       btn.disabled = false;
@@ -171,6 +213,7 @@ function displayTweetData(tweetData) {
 
   // Clear Button Logic
   document.getElementById('clearBtn').addEventListener('click', () => {
+    uploadedVideoData = null; // Clear local video state too
     chrome.storage.local.remove('lastSubmittedTweet', () => {
       displayTweetData(null);
     });
@@ -208,5 +251,3 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     displayTweetData(changes.lastSubmittedTweet.newValue);
   }
 });
-
-setInterval(loadTweetData, 2000);

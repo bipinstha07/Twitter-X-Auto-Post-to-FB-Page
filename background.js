@@ -70,7 +70,8 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
         // Convert base64 data URL to Blob
         const response = await fetch(videoUrl);
         const blob = await response.blob();
-        formData.append("source", blob);
+        // IMPORTANT: Specify a filename like 'video.mp4' so Facebook knows the format
+        formData.append("source", blob, "video.mp4");
       } else {
         formData.append("file_url", videoUrl);
       }
@@ -218,26 +219,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "FETCH_SNAPTWITT_VIDEO") {
     const tweetUrl = message.payload.url;
-    console.log("Fetching SnapTwitt video for:", tweetUrl);
+    const shouldUpdate = message.payload.updateExisting;
+    const initialData = message.payload.tweetData;
+    
+    console.log("Fetching SnapTwitt video for:", tweetUrl, "shouldUpdate:", shouldUpdate);
 
     (async () => {
       try {
-        // Close any existing pending request
         if (pendingSnapTwittRequest) {
           pendingSnapTwittRequest.reject(new Error("New request started"));
         }
 
-        // Open SnapTwitt in a new tab
         const tab = await chrome.tabs.create({
           url: `https://snaptwitt.com/#url=${encodeURIComponent(tweetUrl)}`,
-          active: false, // Don't focus the tab
+          active: false,
           pinned: true
         });
 
-        // Set up promise to wait for worker result
         const result = await new Promise((resolve, reject) => {
           pendingSnapTwittRequest = { resolve, reject };
-          // Safety timeout
           setTimeout(() => {
             if (pendingSnapTwittRequest) {
               chrome.tabs.remove(tab.id);
@@ -247,13 +247,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }, 45000);
         });
 
+        if (result && result.success && result.videoUrl && shouldUpdate) {
+          console.log("SnapTwitt Success, updating stored tweet with video...");
+          
+          // Download the video
+          const videoDataForDownload = { ...initialData, video: result.videoUrl };
+          const saveResult = await saveTweetFiles(videoDataForDownload);
+          
+          // Get existing data and merge
+          chrome.storage.local.get(['lastSubmittedTweet'], (store) => {
+            const updatedTweet = {
+              ...(store.lastSubmittedTweet || initialData),
+              video: result.videoUrl,
+              videoIsDirect: true,
+              savedFolderPath: saveResult.success ? saveResult.folderPath : (store.lastSubmittedTweet?.savedFolderPath || null)
+            };
+            chrome.storage.local.set({ lastSubmittedTweet: updatedTweet });
+          });
+        }
+
         sendResponse(result);
       } catch (error) {
         console.error("Error in SnapTwitt flow:", error);
         sendResponse({ success: false, error: error.message });
       }
     })();
-    return true; // Keep channel open
+    return true; 
   }
 
   if (message.type === "POST_TO_FACEBOOK") {

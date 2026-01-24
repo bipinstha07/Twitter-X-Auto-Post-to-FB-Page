@@ -329,130 +329,68 @@ function injectButton(tweet) {
 
     try {
       let data = extractTweetData(tweet);
-      console.log("Extracted tweet data:", data);
+      const hasVideo = !!data.video;
+      console.log("Extracted tweet data:", data, "Has video:", hasVideo);
       
-      // If there's a video, use our automated SnapTwitt background flow
-      if (data.video && data.postId) {
-        try {
-          btn.innerText = "Extracting Video...";
-          btn.style.background = "#fbbf24"; // Orange/yellow for extraction
-          const tweetUrl = `https://x.com/i/status/${data.postId}`;
-          console.log("Starting SnapTwitt automation for:", tweetUrl);
-          
-          const response = await new Promise((resolve) => {
-            chrome.runtime.sendMessage({
-              type: "FETCH_SNAPTWITT_VIDEO",
-              payload: { url: tweetUrl }
-            }, resolve);
-          });
-
-          if (response && response.success && response.videoUrl) {
-            console.log("SnapTwitt automation success:", response.videoUrl);
-            data.video = response.videoUrl;
-            data.videoIsDirect = true;
-            btn.innerText = "Processing Preview...";
-          } else {
-            console.warn("SnapTwitt automation failed, falling back to blob:", response?.error);
-            btn.innerText = "Processing Backup...";
-          }
-        } catch (automationError) {
-          console.error("SnapTwitt automation error:", automationError);
-        }
-      }
-
-      // If we don't have a direct link and it's a blob, convert to base64 as last resort
-      if (data.video && data.video.startsWith('blob:') && !data.videoIsDirect) {
-        try {
-          console.log("Converting temporary blob to Data URL for playback...");
-          const response = await fetch(data.video);
-          if (response.ok) {
-            const blob = await response.blob();
-            const reader = new FileReader();
-            const base64Promise = new Promise((resolve, reject) => {
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = () => reject(new Error("Blob conversion failed"));
-              reader.readAsDataURL(blob);
-            });
-            data.video = await base64Promise;
-            data.videoIsBlob = true;
-          }
-        } catch (blobError) {
-          console.error("Blob conversion failed:", blobError);
-        }
-      }
-      
-      // Send message to background script
+      // 1. IMMEDIATELY send text/images to sidebar
       chrome.runtime.sendMessage(
         {
           type: "SUBMIT_TWEET",
-          payload: data
+          payload: { ...data, video: null, hasVideo: hasVideo } // Send without video URL initially but flag it has a video
         },
         (response) => {
-          // Check for extension context invalidation
-          if (chrome.runtime.lastError) {
-            const errorMsg = chrome.runtime.lastError.message;
-            if (errorMsg && errorMsg.includes('Extension context invalidated')) {
-              extensionContextValid = false;
-              btn.innerText = "Extension Reloaded";
-              btn.style.background = "#ef4444";
-              alert('Extension was reloaded. Please refresh the page to continue.');
-              return;
-            }
-            console.error("Error sending message:", chrome.runtime.lastError);
-            btn.innerText = "Error";
-            btn.style.background = "#ef4444";
-            setTimeout(() => {
-              btn.innerText = "Preview";
-              btn.style.background = "#1d9bf0";
-              btn.style.opacity = "1";
-              btn.disabled = false;
-              btn.style.cursor = "pointer";
-            }, 2000);
-            return;
-          }
-
-          console.log("Response from background:", response);
-          
+          console.log("Immediate text preview response:", response);
           if (response && response.success) {
-            console.log("Success! Updating button to Previewed");
-            btn.innerText = "Previewed ✓";
-            btn.style.background = "#10b981"; // Success green
-            btn.style.opacity = "1";
-            btn.style.cursor = "default";
-            
-            setTimeout(() => {
-              btn.innerText = "Preview";
-              btn.style.background = "#1d9bf0";
-              btn.disabled = false;
-              btn.style.cursor = "pointer";
-            }, 3000);
-          } else {
-            btn.innerText = "Failed";
-            btn.style.background = "#ef4444";
-            setTimeout(() => {
-              btn.innerText = "Preview";
-              btn.style.background = "#1d9bf0";
+            btn.innerText = hasVideo ? "Extracting Video..." : "Previewed ✓";
+            if (hasVideo) {
+              btn.style.background = "#fbbf24"; // Orange for extraction
+            } else {
+              btn.style.background = "#10b981";
               btn.style.opacity = "1";
-              btn.disabled = false;
-              btn.style.cursor = "pointer";
-            }, 2000);
+              setTimeout(() => {
+                btn.innerText = "Preview";
+                btn.style.background = "#1d9bf0";
+                btn.disabled = false;
+              }, 2000);
+            }
           }
         }
       );
-    } catch (error) {
-      if (error.message && error.message.includes('Extension context invalidated')) {
-        extensionContextValid = false;
-        btn.innerText = "Extension Reloaded";
-        btn.style.background = "#ef4444";
-        alert('Extension was reloaded. Please refresh the page to continue.');
-      } else {
-        console.error("Error extracting tweet data:", error);
-        btn.innerText = "Error";
-        btn.style.background = "#ef4444";
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
+
+      // 2. If there's a video, start background extraction without blocking
+      if (hasVideo && data.postId) {
+        const tweetUrl = `https://x.com/i/status/${data.postId}`;
+        console.log("Starting SnapTwitt automation for:", tweetUrl);
+        
+        chrome.runtime.sendMessage({
+          type: "FETCH_SNAPTWITT_VIDEO",
+          payload: { url: tweetUrl, updateExisting: true, tweetData: { ...data, hasVideo: true } }
+        }, (response) => {
+          if (response && response.success) {
+            btn.innerText = "Previewed ✓";
+            btn.style.background = "#10b981";
+            btn.style.opacity = "1";
+            setTimeout(() => {
+              btn.innerText = "Preview";
+              btn.style.background = "#1d9bf0";
+              btn.disabled = false;
+            }, 2000);
+          } else {
+            btn.innerText = "Video Failed";
+            btn.style.background = "#ef4444";
+            setTimeout(() => {
+              btn.innerText = "Preview";
+              btn.style.background = "#1d9bf0";
+              btn.disabled = false;
+            }, 2000);
+          }
+        });
       }
+    } catch (error) {
+      console.error("Error extracting tweet data:", error);
+      btn.innerText = "Error";
+      btn.style.background = "#ef4444";
+      btn.disabled = false;
     }
   };
 

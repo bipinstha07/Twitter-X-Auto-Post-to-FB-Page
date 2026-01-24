@@ -104,13 +104,30 @@
       return;
     }
 
-    // 2. Look for intermediate download buttons
-    const intermediateBtns = Array.from(document.querySelectorAll('a.btn[href*="source=twitter"]'));
+    // 2. Look for intermediate download buttons (The one with source=twitter)
+    const intermediateBtns = Array.from(document.querySelectorAll('a.btn[href*="source=twitter"], a.ff-goh4, a.btn-secondary'))
+      .filter(a => a.innerText.toLowerCase().includes('download') || a.href.includes('source=twitter'));
+
     if (intermediateBtns.length > 0) {
-      const nextUrl = intermediateBtns[0].href;
-      console.log('SnapTwitt Worker: Found intermediate download link, navigating to:', nextUrl);
+      const btn = intermediateBtns[0];
+      console.log('SnapTwitt Worker: Found intermediate button, clicking after short delay...');
+      
       clearInterval(checkResult);
-      window.location.href = nextUrl; 
+      
+      // Wait a moment to ensure site is ready
+      setTimeout(() => {
+        // Remove target="_blank" so the download/navigation happens in THIS tab
+        btn.removeAttribute('target');
+        console.log('SnapTwitt Worker: Executing click on:', btn.href);
+        btn.click();
+        
+        // Fallback: if click doesn't work, navigate manually
+        setTimeout(() => {
+          if (window.location.href !== btn.href) {
+            window.location.href = btn.href;
+          }
+        }, 500);
+      }, 1000);
       return;
     }
 
