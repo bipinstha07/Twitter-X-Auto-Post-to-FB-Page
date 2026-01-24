@@ -40,23 +40,6 @@
       gap: 8px;
     }
 
-    .status {
-      font-size: 12px;
-      padding: 6px 12px;
-      border-radius: 99px;
-      background: var(--bg-gray);
-      color: var(--text-gray);
-      margin-bottom: 20px;
-      display: inline-block;
-      border: 1px solid var(--border-color);
-    }
-
-    .status.active {
-      background: rgba(0, 186, 124, 0.1);
-      color: var(--success-green);
-      border-color: rgba(0, 186, 124, 0.2);
-    }
-
     .no-data {
       text-align: center;
       padding: 40px 20px;
@@ -72,7 +55,7 @@
       border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 16px;
-      margin-top: 12px;
+      margin-top: 5px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
 
@@ -85,12 +68,25 @@
       letter-spacing: 0.5px;
     }
 
-    .tweet-text {
+    .tweet-text-edit {
+      width: 100%;
+      min-height: 100px;
       font-size: 11.5px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      margin-bottom: 16px;
+      font-family: inherit;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-gray);
+      resize: vertical;
       line-height: 1.5;
+      margin-bottom: 16px;
+      color: var(--text-main);
+    }
+
+    .tweet-text-edit:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      background: white;
     }
 
     .meta-info {
@@ -223,6 +219,8 @@
     .video-preview-local {
       margin-top: 10px;
       width: 100%;
+      max-height: 120px;
+      background: #000;
       border-radius: 4px;
       display: none;
     }
@@ -237,15 +235,128 @@
       background: #d1d9dd;
       border-radius: 10px;
     }
+
+    /* Settings Button */
+    .settings-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px;
+      z-index: 100;
+      color: var(--text-gray);
+      transition: color 0.2s;
+    }
+
+    .settings-btn:hover {
+      color: var(--primary-blue);
+    }
+
+    /* Views */
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    /* Setup/Settings Panel */
+    .config-panel {
+      padding: 20px;
+      background: var(--bg-gray);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      margin-top: 40px;
+    }
+
+    .config-panel h2 {
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-gray);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+    }
+
+    .btn-save {
+      background: var(--primary-blue);
+      color: white;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn-save:hover {
+      background: #1a8cd8;
+    }
+
+    .setup-desc {
+      font-size: 13px;
+      color: var(--text-gray);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>  
-  <div class="status" id="status">
-    Checking X connection...
+  <button id="settingsBtn" class="settings-btn" title="Facebook Settings">⚙️</button>
+
+  <!-- Main Content View -->
+  <div id="mainView" class="view active">
+    <h1>X Post Collector</h1>
+    <div id="tweetDisplay" class="no-data">
+      No tweets collected yet.<br>Click "Preview" on any post to start.
+    </div>
   </div>
 
-  <div id="tweetDisplay" class="no-data">
-    No tweets collected yet.<br>Click "Preview" on any post to start.
+  <!-- Settings/Setup View -->
+  <div id="configView" class="view">
+    <div class="config-panel">
+      <h2 id="configTitle">Facebook Configuration</h2>
+      <p class="setup-desc">Enter your Facebook Page credentials to enable posting.</p>
+      
+      <div class="form-group">
+        <label>Facebook Page ID</label>
+        <input type="text" id="fbPageId" placeholder="e.g. 105196998627367">
+      </div>
+
+      <div class="form-group">
+        <label>Page Access Token</label>
+        <input type="password" id="fbAccessToken" placeholder="Enter your EAAY... token">
+      </div>
+
+      <button id="saveConfigBtn" class="btn-save">Save Credentials</button>
+      <button id="backBtn" class="btn-clear" style="margin-top: 8px; width: 100%; display: none;">Back</button>
+    </div>
   </div>
 
   <script src="sidebar.js"></script>

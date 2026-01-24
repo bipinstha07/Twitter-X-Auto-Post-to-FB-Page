@@ -49,22 +49,38 @@ async function saveTweetFiles(tweetData) {
 }
 
 // Facebook API Configuration
-const FB_PAGE_ID = "105196998627367";
-const FB_PAGE_ACCESS_TOKEN = "EAAYtNE3ZCDekBQl9ZCkQFsV59JEZCu9ZAoCTxQ3CxySZCpZCUQpldeagbKGznM3YKPm3jzU6NT9RCwXDbPQHpJD4sD6aFhs3kujYpgnupAlEvte24v7kHzT9ZCKKJlGYjHSJbZBwQKMrISqmqhjYKHIAtpn6SANZBpVmo6oRGG935GK5SHUDieZCazZBlC90UzZBd7D5UUitR1nqDHnbKKIWb2d6q0IZD";
 const FB_GRAPH_API_URL = "https://graph.facebook.com/v19.0/";
+
+// Helper to get FB credentials from storage
+async function getFBCredentials() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['fbPageId', 'fbAccessToken'], (result) => {
+      resolve({
+        pageId: result.fbPageId,
+        accessToken: result.fbAccessToken
+      });
+    });
+  });
+}
 
 // Post to Facebook logic
 async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
   console.log("SENDING TO FACEBOOK >>>", { message, imageUrls, videoUrl, videoIsBlob });
 
+  const { pageId, accessToken } = await getFBCredentials();
+  
+  if (!pageId || !accessToken) {
+    throw new Error("Facebook Page ID or Access Token is missing. Please set them in settings.");
+  }
+
   try {
     // Case 1: Video post (Prioritize video if exists)
     if (videoUrl) {
       console.log("Posting video to Facebook...");
-      const url = `${FB_GRAPH_API_URL}${FB_PAGE_ID}/videos`;
+      const url = `${FB_GRAPH_API_URL}${pageId}/videos`;
       const formData = new FormData();
       formData.append("description", message);
-      formData.append("access_token", FB_PAGE_ACCESS_TOKEN);
+      formData.append("access_token", accessToken);
 
       if (videoIsBlob && videoUrl.startsWith('data:')) {
         // Convert base64 data URL to Blob
@@ -94,10 +110,10 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
     // Case 2: Images or Text-only post
     if (!imageUrls || imageUrls.length === 0) {
       // Case 1: Text-only post
-      const url = `${FB_GRAPH_API_URL}${FB_PAGE_ID}/feed`;
+      const url = `${FB_GRAPH_API_URL}${pageId}/feed`;
       const formData = new URLSearchParams();
       formData.append("message", message);
-      formData.append("access_token", FB_PAGE_ACCESS_TOKEN);
+      formData.append("access_token", accessToken);
       
       const response = await fetch(url, {
         method: "POST",
@@ -111,11 +127,11 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
     
     if (imageUrls.length === 1) {
       // Case 2: Single photo post
-      const url = `${FB_GRAPH_API_URL}${FB_PAGE_ID}/photos`;
+      const url = `${FB_GRAPH_API_URL}${pageId}/photos`;
       const formData = new URLSearchParams();
       formData.append("message", message);
       formData.append("url", imageUrls[0]);
-      formData.append("access_token", FB_PAGE_ACCESS_TOKEN);
+      formData.append("access_token", accessToken);
       
       const response = await fetch(url, {
         method: "POST",
@@ -132,11 +148,11 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
     
     // 1. Upload each photo individually as 'unpublished'
     const uploadPromises = imageUrls.map(async (url, index) => {
-      const uploadUrl = `${FB_GRAPH_API_URL}${FB_PAGE_ID}/photos`;
+      const uploadUrl = `${FB_GRAPH_API_URL}${pageId}/photos`;
       const formData = new URLSearchParams();
       formData.append("url", url);
       formData.append("published", "false"); // Don't publish yet
-      formData.append("access_token", FB_PAGE_ACCESS_TOKEN);
+      formData.append("access_token", accessToken);
       
       const response = await fetch(uploadUrl, {
         method: "POST",
@@ -156,10 +172,10 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
     console.log("All photos uploaded, photo IDs:", photoIds);
 
     // 2. Create a feed post attaching all uploaded photos
-    const postUrl = `${FB_GRAPH_API_URL}${FB_PAGE_ID}/feed`;
+    const postUrl = `${FB_GRAPH_API_URL}${pageId}/feed`;
     const postData = new URLSearchParams();
     postData.append("message", message);
-    postData.append("access_token", FB_PAGE_ACCESS_TOKEN);
+    postData.append("access_token", accessToken);
     
     // attached_media must be a JSON array of objects: [{"media_fbid":"id1"}, {"media_fbid":"id2"}]
     const attachedMedia = photoIds.map(id => ({ media_fbid: id }));
@@ -248,21 +264,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
 
         if (result && result.success && result.videoUrl && shouldUpdate) {
-          console.log("SnapTwitt Success, updating stored tweet with video...");
+          console.log("SnapTwitt Success, checking if current tweet matches...");
           
-          // Download the video
-          const videoDataForDownload = { ...initialData, video: result.videoUrl };
-          const saveResult = await saveTweetFiles(videoDataForDownload);
-          
-          // Get existing data and merge
-          chrome.storage.local.get(['lastSubmittedTweet'], (store) => {
-            const updatedTweet = {
-              ...(store.lastSubmittedTweet || initialData),
-              video: result.videoUrl,
-              videoIsDirect: true,
-              savedFolderPath: saveResult.success ? saveResult.folderPath : (store.lastSubmittedTweet?.savedFolderPath || null)
-            };
-            chrome.storage.local.set({ lastSubmittedTweet: updatedTweet });
+          // Get current stored tweet
+          chrome.storage.local.get(['lastSubmittedTweet'], async (store) => {
+            const currentTweet = store.lastSubmittedTweet;
+            
+            // ONLY update if the postId matches the one we started extracting for
+            if (currentTweet && currentTweet.postId === initialData.postId) {
+              console.log("Post ID matches, updating stored tweet with video...");
+              
+              // Download the video
+              const videoDataForDownload = { ...initialData, video: result.videoUrl };
+              const saveResult = await saveTweetFiles(videoDataForDownload);
+              
+              const updatedTweet = {
+                ...currentTweet,
+                video: result.videoUrl,
+                videoIsDirect: true,
+                hasVideo: true, // Ensure this is set
+                savedFolderPath: saveResult.success ? saveResult.folderPath : (currentTweet.savedFolderPath || null)
+              };
+              chrome.storage.local.set({ lastSubmittedTweet: updatedTweet });
+            } else {
+              console.log("Post ID mismatch or tweet changed, skipping storage update for video link.");
+              // Still download the video though, since the user clicked preview on it earlier
+              const videoDataForDownload = { ...initialData, video: result.videoUrl };
+              await saveTweetFiles(videoDataForDownload);
+            }
           });
         }
 
@@ -349,7 +378,7 @@ chrome.action.onClicked.addListener((tab) => {
                 chrome.storage.local.set({ sidebarOpen: true });
               })
               .catch((err) => {
-                console.error('Error opening sidePanel:', err);
+                // Ignore errors related to user closing panel early
               });
           }, 1000);
         });

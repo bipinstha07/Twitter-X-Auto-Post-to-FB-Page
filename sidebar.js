@@ -1,10 +1,81 @@
-// Sidebar script for X post Auto to Fb
-
-// Global state for uploaded video to survive refreshes
+// Global state
 let uploadedVideoData = null;
+let currentPostIdForUpload = null;
+let fbCredentialsSet = false;
 
 // Mark sidebar as open and establish heartbeat
 chrome.storage.local.set({ sidebarOpen: true });
+
+// Load initial state
+function loadInitialState() {
+  chrome.storage.local.get(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId', 'fbPageId', 'fbAccessToken'], (result) => {
+    // Check for credentials first
+    if (result.fbPageId && result.fbAccessToken) {
+      fbCredentialsSet = true;
+      document.getElementById('fbPageId').value = result.fbPageId;
+      document.getElementById('fbAccessToken').value = result.fbAccessToken;
+      showView('mainView');
+    } else {
+      fbCredentialsSet = false;
+      document.getElementById('configTitle').innerText = "Initial Setup";
+      document.getElementById('backBtn').style.display = 'none';
+      showView('configView');
+    }
+
+    if (result.uploadedVideoPostId) {
+      currentPostIdForUpload = result.uploadedVideoPostId;
+    }
+    if (result.uploadedVideoData) {
+      uploadedVideoData = result.uploadedVideoData;
+    }
+    if (result.lastSubmittedTweet) {
+      displayTweetData(result.lastSubmittedTweet);
+    } else {
+      displayTweetData(null);
+    }
+  });
+}
+
+// View Management
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  
+  // Toggle settings button visibility
+  document.getElementById('settingsBtn').style.display = viewId === 'configView' ? 'none' : 'block';
+}
+
+// Settings Event Listeners
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('configTitle').innerText = "Facebook Configuration";
+  document.getElementById('backBtn').style.display = 'block';
+  showView('configView');
+});
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  if (fbCredentialsSet) {
+    showView('mainView');
+  }
+});
+
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+  const pageId = document.getElementById('fbPageId').value.trim();
+  const token = document.getElementById('fbAccessToken').value.trim();
+
+  if (!pageId || !token) {
+    alert('Please enter both Page ID and Access Token');
+    return;
+  }
+
+  chrome.storage.local.set({
+    fbPageId: pageId,
+    fbAccessToken: token
+  }, () => {
+    fbCredentialsSet = true;
+    alert('Credentials saved successfully!');
+    showView('mainView');
+  });
+});
 
 // Establish a connection to background script to detect when sidebar is closed
 const port = chrome.runtime.connect({ name: "sidebar" });
@@ -27,17 +98,35 @@ function displayTweetData(tweetData) {
     return;
   }
 
+  // If this is a DIFFERENT post than the one we have an uploaded video for, clear the upload
+  if (tweetData.postId !== currentPostIdForUpload) {
+    uploadedVideoData = null;
+    currentPostIdForUpload = tweetData.postId;
+    chrome.storage.local.remove(['uploadedVideoData', 'uploadedVideoPostId']);
+  }
+
   container.className = ''; // Remove no-data class
   
   const text = escapeHtml(tweetData.text || '');
   const submittedAt = escapeHtml(tweetData.submittedAt || 'Unknown');
   const postId = tweetData.postId || '';
+  
+  // Format the post time if available, otherwise fallback to submission time
+  let displayTime = submittedAt;
+  if (tweetData.postTime) {
+    try {
+      const date = new Date(tweetData.postTime);
+      displayTime = date.toLocaleString();
+    } catch (e) {
+      console.error('Error formatting post time:', e);
+    }
+  }
 
   let html = `
     <div class="tweet-card">
       <div class="section-label">Post Information</div>
       <div class="meta-info">
-        <span><strong>Time:</strong> ${submittedAt}</span>
+        <span><strong>Time:</strong> ${displayTime}</span>
         ${postId ? `<span><strong>ID:</strong> ${postId}</span>` : ''}
       </div>
       
@@ -53,8 +142,8 @@ function displayTweetData(tweetData) {
 
       <hr class="divider">
 
-      <div class="section-label">Tweet Content</div>
-      <div class="tweet-text">${text}</div>
+      <div class="section-label">Tweet Content </div>
+      <textarea id="tweetTextEdit" class="tweet-text-edit">${text}</textarea>
   `;
 
   // Display media if present
@@ -82,31 +171,30 @@ function displayTweetData(tweetData) {
       const isData = videoSrc.startsWith('data:');
       
       html += `
-        <div class="video-preview" style="margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative;">
-          <video id="previewVideo" src="${videoSrc}" controls crossorigin="anonymous" style="width: 100%; display: block; max-height: 300px;" poster="${tweetData.images && tweetData.images.length > 0 ? tweetData.images[0] : ''}"></video>
-          <div id="videoError" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; padding: 15px; text-align: center; z-index: 10;"></div>
+        <div class="video-preview" style="margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; max-width: 240px; margin-left: auto; margin-right: auto;">
+          <video id="previewVideo" src="${videoSrc}" controls crossorigin="anonymous" style="width: 100%; display: block; max-height: 150px;" poster="${tweetData.images && tweetData.images.length > 0 ? tweetData.images[0] : ''}"></video>
+          <div id="videoError" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; padding: 10px; text-align: center; z-index: 10;"></div>
           
-          <div class="video-info-box" style="padding: 10px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border-color);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span>🎥</span>
-                <span style="font-size: 11px; font-weight: bold; color: var(--text-main);">Video Source</span>
+          <div class="video-info-box" style="padding: 8px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 10px;">🎥</span>
+                <span style="font-size: 10px; font-weight: bold; color: var(--text-main);">Video Source</span>
               </div>
-              <span id="videoTypeTag" style="font-size: 9px; color: white; background: ${isDirect ? '#00ba7c' : (isData ? '#1d9bf0' : '#f4212e')}; padding: 2px 6px; border-radius: 4px; font-weight: 800;">
+              <span id="videoTypeTag" style="font-size: 8px; color: white; background: ${isDirect ? '#00ba7c' : (isData ? '#1d9bf0' : '#f4212e')}; padding: 1px 4px; border-radius: 3px; font-weight: 800;">
                 ${isDirect ? 'DIRECT' : (isData ? 'DATA' : 'BLOB')}
               </span>
             </div>
             
-            ${isBlob ? `<div style="color: #f4212e; font-size: 10px; margin-bottom: 4px; font-weight: bold;">⚠️ Blob URLs often cannot play here.</div>` : ''}
+            ${isBlob ? `<div style="color: #f4212e; font-size: 9px; margin-bottom: 2px; font-weight: bold;">⚠️ Blob URLs often cannot play here.</div>` : ''}
             
-            <div style="font-size: 10px; color: var(--text-gray); margin-bottom: 4px; font-weight: 600;">URL:</div>
-            <div class="path-badge" style="font-size: 9px; padding: 6px; background: #f8f9fa; color: #1d9bf0; border: 1px solid var(--border-color); border-radius: 4px; word-break: break-all; max-height: 50px; overflow-y: auto; font-family: monospace; line-height: 1.2;" title="Click to copy full URL">
+            <div class="path-badge" style="font-size: 8px; padding: 4px; background: #f8f9fa; color: #1d9bf0; border: 1px solid var(--border-color); border-radius: 4px; word-break: break-all; max-height: 35px; overflow-y: auto; font-family: monospace; line-height: 1.1;" title="Click to copy full URL">
               ${escapeHtml(videoSrc)}
             </div>
             
-            <div style="margin-top: 8px; display: flex; gap: 6px;">
-              <a href="${escapeHtml(videoSrc)}" target="_blank" style="flex: 1; text-decoration: none; font-size: 10px; background: #eee; color: #333; padding: 6px; text-align: center; border-radius: 4px; font-weight: bold; border: 1px solid #ccc;">Open File</a>
-              <a href="https://snaptwitt.com/#url=https://x.com/i/status/${postId}" target="_blank" style="flex: 1; text-decoration: none; font-size: 10px; background: #1d9bf0; color: white; padding: 6px; text-align: center; border-radius: 4px; font-weight: bold;">Manual DL</a>
+            <div style="margin-top: 6px; display: flex; gap: 4px;">
+              <a href="${escapeHtml(videoSrc)}" target="_blank" style="flex: 1; text-decoration: none; font-size: 9px; background: #eee; color: #333; padding: 4px; text-align: center; border-radius: 4px; font-weight: bold; border: 1px solid #ccc;">Open File</a>
+              <a href="https://snaptwitt.com/#url=https://x.com/i/status/${postId}" target="_blank" style="flex: 1; text-decoration: none; font-size: 9px; background: #1d9bf0; color: white; padding: 4px; text-align: center; border-radius: 4px; font-weight: bold;">Manual DL</a>
             </div>
           </div>
         </div>
@@ -135,6 +223,20 @@ function displayTweetData(tweetData) {
 
   container.innerHTML = html;
 
+  // Edit Text Logic - Save as user types
+  const textEdit = document.getElementById('tweetTextEdit');
+  if (textEdit) {
+    textEdit.addEventListener('input', (e) => {
+      const newText = e.target.value;
+      chrome.storage.local.get(['lastSubmittedTweet'], (result) => {
+        if (result.lastSubmittedTweet) {
+          const updated = { ...result.lastSubmittedTweet, text: newText };
+          chrome.storage.local.set({ lastSubmittedTweet: updated });
+        }
+      });
+    });
+  }
+
   // Local Video Upload Logic
   const uploadInput = document.getElementById('localVideoUpload');
   const localPreview = document.getElementById('localVideoPreview');
@@ -151,9 +253,15 @@ function displayTweetData(tweetData) {
         const reader = new FileReader();
         reader.onload = (event) => {
           uploadedVideoData = event.target.result;
+          currentPostIdForUpload = tweetData.postId;
           localPreview.src = uploadedVideoData;
           localPreview.style.display = 'block';
           console.log('Local video uploaded and ready for FB post');
+          // Save to storage so it survives sidebar close
+          chrome.storage.local.set({ 
+            uploadedVideoData: uploadedVideoData,
+            uploadedVideoPostId: tweetData.postId
+          });
         };
         reader.readAsDataURL(file);
       }
@@ -182,14 +290,15 @@ function displayTweetData(tweetData) {
     status.style.background = '#f0f2f5';
     status.style.color = '#536471';
 
-    // Use uploaded video if available, otherwise use original video URL
+    // Use current text from textarea and uploaded video if available
+    const currentText = document.getElementById('tweetTextEdit')?.value || tweetData.text;
     const finalVideoUrl = uploadedVideoData || tweetData.video || null;
     const isBlob = uploadedVideoData ? true : (tweetData.videoIsBlob || false);
 
     chrome.runtime.sendMessage({
       type: 'POST_TO_FACEBOOK',
       payload: {
-        message: tweetData.text,
+        message: currentText,
         imageUrls: tweetData.images && tweetData.images.length > 0 ? tweetData.images : [],
         videoUrl: finalVideoUrl,
         videoIsBlob: isBlob
@@ -213,41 +322,56 @@ function displayTweetData(tweetData) {
 
   // Clear Button Logic
   document.getElementById('clearBtn').addEventListener('click', () => {
-    uploadedVideoData = null; // Clear local video state too
-    chrome.storage.local.remove('lastSubmittedTweet', () => {
+    uploadedVideoData = null; 
+    currentPostIdForUpload = null;
+    chrome.storage.local.remove(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId'], () => {
       displayTweetData(null);
     });
   });
 }
 
-function loadTweetData() {
-  chrome.storage.local.get(['lastSubmittedTweet'], (result) => {
-    if (result.lastSubmittedTweet) {
-      displayTweetData(result.lastSubmittedTweet);
-    } else {
-      displayTweetData(null);
-    }
-  });
-}
-
-loadTweetData();
-
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  if (tabs?.[0]?.url) {
-    const url = tabs[0].url;
-    const statusEl = document.getElementById('status');
-    if (url.includes('twitter.com') || url.includes('x.com')) {
-      statusEl.textContent = 'Active on X.com';
-      statusEl.classList.add('active');
-    } else {
-      statusEl.textContent = 'Navigate to X.com to start';
-      statusEl.classList.remove('active');
-    }
-  }
-});
+loadInitialState();
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes.lastSubmittedTweet) {
-    displayTweetData(changes.lastSubmittedTweet.newValue);
+    const newVal = changes.lastSubmittedTweet.newValue;
+    const oldVal = changes.lastSubmittedTweet.oldValue;
+    const textEdit = document.getElementById('tweetTextEdit');
+    
+    // 1. If it's a completely new post (different ID), always re-render
+    if (!oldVal || newVal.postId !== oldVal.postId) {
+      displayTweetData(newVal);
+      return;
+    }
+
+    // 2. If it's the same post but the video was just found (background script update)
+    if (newVal.video && !oldVal.video) {
+      // We need to re-render to show the video, but let's save the cursor position
+      const selectionStart = textEdit ? textEdit.selectionStart : null;
+      const selectionEnd = textEdit ? textEdit.selectionEnd : null;
+      const isFocused = document.activeElement === textEdit;
+      
+      displayTweetData(newVal);
+      
+      // Restore focus and cursor if we were editing
+      if (isFocused && textEdit) {
+        const newTextEdit = document.getElementById('tweetTextEdit');
+        if (newTextEdit) {
+          newTextEdit.focus();
+          newTextEdit.setSelectionRange(selectionStart, selectionEnd);
+        }
+      }
+      return;
+    }
+
+    // 3. If only the text changed and we ARE currently typing in the textarea,
+    // DO NOT re-render. Re-rendering causes the lose-focus/one-letter-at-a-time bug.
+    if (document.activeElement === textEdit) {
+      console.log('Skipping re-render because user is typing...');
+      return;
+    }
+
+    // 4. Otherwise (textarea not focused), update the display
+    displayTweetData(newVal);
   }
 });

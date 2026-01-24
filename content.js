@@ -220,6 +220,10 @@ function extractTweetData(tweet) {
       return src.includes('/media/') || src.includes('pbs.twimg.com');
     });
 
+  // Extract post time from the <time> element
+  const timeElement = tweet.querySelector('time');
+  const postTime = timeElement ? timeElement.getAttribute('datetime') : null;
+
   // Get video element and extract video URL (including blob URLs which we'll handle later)
   let video = null;
   
@@ -278,7 +282,7 @@ function extractTweetData(tweet) {
     }
   }
 
-  return { text, images, video, postId, username };
+  return { text, images, video, postId, username, postTime };
 }
 
 function injectButton(tweet) {
@@ -323,9 +327,10 @@ function injectButton(tweet) {
     }
 
     btn.disabled = true;
-    btn.innerText = "Previewing...";
-    btn.style.opacity = "0.6";
-    btn.style.cursor = "not-allowed";
+    btn.innerText = "Previewed ✓";
+    btn.style.background = "#10b981"; // Success green
+    btn.style.opacity = "1";
+    btn.style.cursor = "default";
 
     try {
       let data = extractTweetData(tweet);
@@ -341,18 +346,18 @@ function injectButton(tweet) {
         (response) => {
           console.log("Immediate text preview response:", response);
           if (response && response.success) {
-            btn.innerText = hasVideo ? "Extracting Video..." : "Previewed ✓";
-            if (hasVideo) {
-              btn.style.background = "#fbbf24"; // Orange for extraction
-            } else {
-              btn.style.background = "#10b981";
-              btn.style.opacity = "1";
-              setTimeout(() => {
-                btn.innerText = "Preview";
-                btn.style.background = "#1d9bf0";
-                btn.disabled = false;
-              }, 2000);
-            }
+            btn.innerText = "Previewed ✓";
+            btn.style.background = "#10b981"; // Success green
+            btn.style.opacity = "1";
+            
+            // Re-enable the button after a delay so it can be clicked again
+            // We do this even for video posts now, so they aren't stuck
+            setTimeout(() => {
+              btn.innerText = "Preview";
+              btn.style.background = "#1d9bf0";
+              btn.disabled = false;
+              btn.style.cursor = "pointer";
+            }, 3000);
           }
         }
       );
@@ -367,13 +372,12 @@ function injectButton(tweet) {
           payload: { url: tweetUrl, updateExisting: true, tweetData: { ...data, hasVideo: true } }
         }, (response) => {
           if (response && response.success) {
-            btn.innerText = "Previewed ✓";
-            btn.style.background = "#10b981";
-            btn.style.opacity = "1";
+            // Already shows Previewed ✓ from the first message, so we just reset after a delay
             setTimeout(() => {
               btn.innerText = "Preview";
               btn.style.background = "#1d9bf0";
               btn.disabled = false;
+              btn.style.cursor = "pointer";
             }, 2000);
           } else {
             btn.innerText = "Video Failed";
@@ -382,6 +386,7 @@ function injectButton(tweet) {
               btn.innerText = "Preview";
               btn.style.background = "#1d9bf0";
               btn.disabled = false;
+              btn.style.cursor = "pointer";
             }, 2000);
           }
         });
