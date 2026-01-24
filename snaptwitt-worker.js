@@ -2,47 +2,75 @@
 (async () => {
   console.log('SnapTwitt Worker: Started at', window.location.href);
 
-  // Check if we have a URL in the hash OR if we're on a results page
-  const hash = window.location.hash;
-  let tweetUrl = '';
-  
-  if (hash.startsWith('#url=')) {
-    // Decode the URL from the hash (handling potential double encoding)
-    let rawUrl = hash.substring(5);
+  // 1. Extract and Clean URL from Hash or Storage
+  const getUrlFromHash = () => {
+    const hash = window.location.hash;
+    console.log('SnapTwitt Worker: Raw Hash:', hash);
+    if (!hash || !hash.includes('url=')) return '';
+    
+    // Split by 'url=' and take everything after
+    const parts = hash.split('url=');
+    if (parts.length < 2) return '';
+    
+    let raw = parts[1];
+    
+    // Decode the URL (handling potential multiple encoding)
+    let decoded = raw;
     try {
-      tweetUrl = decodeURIComponent(rawUrl);
-      // If it still looks encoded (contains %3A for :), decode again
-      if (tweetUrl.includes('%3A')) {
-        tweetUrl = decodeURIComponent(tweetUrl);
+      // First pass
+      decoded = decodeURIComponent(decoded);
+      // Second pass (in case of double encoding)
+      if (decoded.includes('%3A') || decoded.includes('%2F')) {
+        decoded = decodeURIComponent(decoded);
       }
     } catch (e) {
-      tweetUrl = rawUrl;
+      console.warn('SnapTwitt Worker: Decoding error', e);
     }
-    // Save it to session storage so it persists across navigations on this site
+    
+    // Manual final cleanup for common characters
+    return decoded.replace(/%3A/gi, ':').replace(/%2F/gi, '/').replace(/%3F/gi, '?').replace(/%3D/gi, '=');
+  };
+
+  let tweetUrl = getUrlFromHash();
+  
+  if (tweetUrl) {
     sessionStorage.setItem('currentSnapTwittUrl', tweetUrl);
   } else {
-    tweetUrl = sessionStorage.getItem('currentSnapTwittUrl');
+    tweetUrl = sessionStorage.getItem('currentSnapTwittUrl') || '';
   }
 
   if (!tweetUrl) {
-    console.log('SnapTwitt Worker: No tweet URL found, waiting for hash or storage...');
+    console.log('SnapTwitt Worker: No URL found in hash or storage');
     return;
   }
 
-  console.log('SnapTwitt Worker: Processing Clean URL:', tweetUrl);
+  console.log('SnapTwitt Worker: Clean URL to use:', tweetUrl);
 
   // Function to try clicking the download button if we're on the homepage
   const tryInitialDownload = () => {
-    const input = document.querySelector('input[type="text"]') || document.querySelector('.form-control');
-    if (input && !input.value) {
-      console.log('SnapTwitt Worker: Filling homepage input');
+    // Look for the specific input by name, then fallback to general selectors
+    const input = document.querySelector('input[name="url"]') || 
+                  document.querySelector('input[type="text"]') || 
+                  document.querySelector('.form-control');
+
+    if (input) {
+      console.log('SnapTwitt Worker: Input found, current value:', input.value);
+      
+      // Force the value regardless of what was there
       input.value = tweetUrl;
+      
+      // Trigger events to make sure the site's JavaScript notices the change
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
       
-      const downloadBtn = document.querySelector('button[type="submit"]') || document.querySelector('.btn-download') || Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Download'));
+      const downloadBtn = document.querySelector('button[type="submit"]') || 
+                          document.querySelector('.btn-download') || 
+                          document.querySelector('#submit') ||
+                          Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Download'));
+      
       if (downloadBtn) {
-        console.log('SnapTwitt Worker: Clicking initial download');
+        console.log('SnapTwitt Worker: Clicking download button');
         downloadBtn.click();
         return true;
       }
