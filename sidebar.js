@@ -41,11 +41,20 @@ function showView(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
   
-  // Toggle settings button visibility
+  // Toggle navigation buttons visibility
   document.getElementById('settingsBtn').style.display = viewId === 'configView' ? 'none' : 'block';
+  document.getElementById('homeBtn').style.display = viewId === 'mainView' ? 'none' : 'block';
 }
 
-// Settings Event Listeners
+// Navigation Event Listeners
+document.getElementById('homeBtn').addEventListener('click', () => {
+  if (fbCredentialsSet) {
+    showView('mainView');
+  } else {
+    showView('configView');
+  }
+});
+
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('configTitle').innerText = "Facebook Configuration";
   document.getElementById('backBtn').style.display = 'block';
@@ -58,22 +67,62 @@ document.getElementById('backBtn').addEventListener('click', () => {
   }
 });
 
+// Toggle Token Visibility
+document.getElementById('toggleToken')?.addEventListener('click', () => {
+  const tokenInput = document.getElementById('fbAccessToken');
+  const eyeIcon = document.getElementById('eyeIcon');
+  
+  if (tokenInput.type === 'password') {
+    tokenInput.type = 'text';
+    // Eye off icon
+    eyeIcon.innerHTML = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92C21.27 15.39 23 12 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.73 10.15 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+  } else {
+    tokenInput.type = 'password';
+    // Eye on icon
+    eyeIcon.innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+  }
+});
+
+// Guide Button
+document.getElementById('guideBtn')?.addEventListener('click', () => {
+  showView('guideView');
+});
+
+document.getElementById('closeGuideBtn')?.addEventListener('click', () => {
+  showView('configView');
+});
+
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
   const pageId = document.getElementById('fbPageId').value.trim();
   const token = document.getElementById('fbAccessToken').value.trim();
+  const btn = document.getElementById('saveConfigBtn');
 
   if (!pageId || !token) {
     alert('Please enter both Page ID and Access Token');
     return;
   }
 
+  btn.disabled = true;
+  btn.innerText = 'Saving...';
+
   chrome.storage.local.set({
     fbPageId: pageId,
     fbAccessToken: token
   }, () => {
     fbCredentialsSet = true;
-    alert('Credentials saved successfully!');
-    showView('mainView');
+    
+    // Brief success state on button
+    btn.innerText = 'Settings Saved! ✓';
+    btn.style.background = 'var(--success-green)';
+    btn.style.borderColor = 'var(--success-green)';
+    
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerText = 'Save Credentials';
+      btn.style.background = ''; // Revert to CSS default
+      btn.style.borderColor = '';
+      showView('mainView');
+    }, 1200);
   });
 });
 

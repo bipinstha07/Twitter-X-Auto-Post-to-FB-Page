@@ -21,18 +21,13 @@
     }
   ],
   "action": {
-    "default_icon": {
-      "16": "public/vite.svg",
-      "48": "public/vite.svg",
-      "128": "public/vite.svg"
-    }
   },
   "side_panel": {
     "default_path": "sidebar.html"
   },
   "icons": {
-    "16": "public/vite.svg",
-    "48": "public/vite.svg",
-    "128": "public/vite.svg"
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
   }
 }

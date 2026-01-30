@@ -226,9 +226,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       pendingSnapTwittRequest.resolve(message.payload);
       pendingSnapTwittRequest = null;
     }
-    // Close the worker tab
+    // Close the worker tab after 5 seconds to ensure download starts
     if (sender.tab) {
-      chrome.tabs.remove(sender.tab.id);
+      console.log("Closing SnapTwitt tab:", sender.tab.id);
+      setTimeout(() => {
+        chrome.tabs.remove(sender.tab.id, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("Error closing tab:", chrome.runtime.lastError.message);
+          } else {
+            console.log("Tab closed successfully");
+          }
+        });
+      }, 5000);
     }
     return;
   }

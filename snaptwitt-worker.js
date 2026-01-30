@@ -101,6 +101,11 @@
         type: 'SNAPTWITT_RESULT',
         payload: { success: true, videoUrl: bestLink }
       });
+      // Fallback: close the tab from here if background fails
+      setTimeout(() => {
+        console.log('SnapTwitt Worker: Self-closing attempt...');
+        window.close();
+      }, 6000);
       return;
     }
 
@@ -144,6 +149,7 @@
         type: 'SNAPTWITT_RESULT',
         payload: { success: false, error: 'Timeout' }
       });
+      setTimeout(() => window.close(), 1000);
     }
     
     // Check for error messages on the page
@@ -156,6 +162,7 @@
         type: 'SNAPTWITT_RESULT',
         payload: { success: false, error: errorMsg.innerText }
       });
+      setTimeout(() => window.close(), 1000);
     }
   }, 1000);
 

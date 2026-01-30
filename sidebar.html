@@ -236,23 +236,60 @@
       border-radius: 10px;
     }
 
-    /* Settings Button */
-    .settings-btn {
+    /* Navigation Buttons */
+    .nav-buttons {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 4px;
+      z-index: 100;
+    }
+
+    .nav-btn {
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 20px;
-      padding: 4px;
-      z-index: 100;
+      padding: 4px 8px;
       color: var(--text-gray);
-      transition: color 0.2s;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .settings-btn:hover {
+    .nav-btn:hover {
       color: var(--primary-blue);
+      background-color: #e8f5fd;
+    }
+
+    /* Logo Header */
+    .logo-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo-header img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      margin-bottom: 12px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .logo-header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--text-main);
     }
 
     /* Views */
@@ -267,45 +304,103 @@
     /* Setup/Settings Panel */
     .config-panel {
       padding: 20px;
-      background: var(--bg-gray);
-      border-radius: 16px;
+      background: var(--bg-white);
+      border-radius: 12px;
       border: 1px solid var(--border-color);
-      margin-top: 40px;
+      margin-top: 10px;
     }
 
     .config-panel h2 {
       font-size: 16px;
+      font-weight: 700;
       margin-top: 0;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      margin-bottom: 4px;
+      color: var(--text-main);
+    }
+
+    .setup-desc {
+      font-size: 12px;
+      color: var(--text-gray);
+      margin-bottom: 20px;
+      line-height: 1.4;
     }
 
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 18px;
+    }
+
+    .label-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
     }
 
     .form-group label {
-      display: block;
       font-size: 12px;
-      font-weight: 700;
-      color: var(--text-gray);
-      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .help-link {
+      font-size: 11px;
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+
+    .help-link:hover {
+      text-decoration: underline;
+    }
+
+    .input-wrapper {
+      position: relative;
     }
 
     .form-group input {
       width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
+      padding: 10px 38px 10px 12px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
       font-size: 13px;
-      transition: border-color 0.2s;
+      background: #fafafa;
+      transition: all 0.2s;
+      color: var(--text-main);
     }
 
     .form-group input:focus {
       outline: none;
       border-color: var(--primary-blue);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.1);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      opacity: 0.7;
+    }
+
+    .toggle-password:hover {
+      color: var(--primary-blue);
+      opacity: 1;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .toggle-password svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
     }
 
     .btn-save {
@@ -313,26 +408,111 @@
       color: white;
       width: 100%;
       margin-top: 8px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
     }
 
     .btn-save:hover {
       background: #1a8cd8;
     }
 
-    .setup-desc {
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .status-badge.connected {
+      background: #e7f8f2;
+      color: #00ba7c;
+    }
+
+    /* Guide View Styles */
+    .guide-container {
+      padding: 16px;
       font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .guide-container h2 {
+      font-size: 16px;
+      font-weight: 800;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guide-container h2:first-child {
+      margin-top: 0;
+    }
+
+    .guide-step {
+      background: var(--bg-gray);
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .step-num {
+      background: var(--primary-blue);
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .guide-container p {
+      margin: 8px 0;
       color: var(--text-gray);
-      margin-bottom: 20px;
-      line-height: 1.5;
+    }
+
+    .guide-container code {
+      background: #eee;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .btn-back-to-settings {
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      font-size: 12px;
+      background: var(--bg-gray);
+      color: var(--text-main);
+      width: fit-content;
     }
   </style>
 </head>
 <body>  
-  <button id="settingsBtn" class="settings-btn" title="Facebook Settings">⚙️</button>
+  <div class="nav-buttons">
+    <button id="homeBtn" class="nav-btn" title="Go to Home">Home</button>
+    <button id="settingsBtn" class="nav-btn" title="Facebook Settings">Settings</button>
+  </div>
+
+  <div class="logo-header">
+    <img src="logo.png" alt="Logo">
+    <h1>X to FB Auto</h1>
+  </div>
 
   <!-- Main Content View -->
   <div id="mainView" class="view active">
-    <h1>X Post Collector</h1>
+  
     <div id="tweetDisplay" class="no-data">
       No tweets collected yet.<br>Click "Preview" on any post to start.
     </div>
@@ -341,21 +521,62 @@
   <!-- Settings/Setup View -->
   <div id="configView" class="view">
     <div class="config-panel">
-      <h2 id="configTitle">Facebook Configuration</h2>
-      <p class="setup-desc">Enter your Facebook Page credentials to enable posting.</p>
+      <h2 id="configTitle">Facebook Settings</h2>
+      <p class="setup-desc">Configure your Facebook Page connection below.</p>
       
       <div class="form-group">
-        <label>Facebook Page ID</label>
-        <input type="text" id="fbPageId" placeholder="e.g. 105196998627367">
+        <div class="label-wrapper">
+          <label for="fbPageId">Facebook Page ID</label>
+          <a href="https://developers.facebook.com/apps/" target="_blank" class="help-link">Where's this?</a>
+        </div>
+        <div class="input-wrapper">
+          <input type="text" id="fbPageId" placeholder="e.g. 105196998627367">
+        </div>
       </div>
 
       <div class="form-group">
-        <label>Page Access Token</label>
-        <input type="password" id="fbAccessToken" placeholder="Enter your EAAY... token">
+        <div class="label-wrapper">
+          <label for="fbAccessToken">Page Access Token</label>
+          <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="help-link">Get Token</a>
+        </div>
+        <div class="input-wrapper">
+          <input type="password" id="fbAccessToken" placeholder="Enter EAAY... token">
+          <button type="button" id="toggleToken" class="toggle-password" title="Toggle Visibility">
+            <svg viewBox="0 0 24 24" id="eyeIcon"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
       </div>
 
       <button id="saveConfigBtn" class="btn-save">Save Credentials</button>
-      <button id="backBtn" class="btn-clear" style="margin-top: 8px; width: 100%; display: none;">Back</button>
+      <button id="guideBtn" class="btn-clear" style="margin-top: 10px; width: 100%; border: 1px solid var(--border-color); font-size: 13px; font-weight: 500;">View Setup Guide</button>
+      <button id="backBtn" class="btn-clear" style="margin-top: 10px; width: 100%; display: none; font-size: 13px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Guide View -->
+  <div id="guideView" class="view">
+    <div class="guide-container">
+      <button id="closeGuideBtn" class="btn-clear btn-back-to-settings">← Back to Settings</button>
+      
+      <h2><span class="step-num">1</span> Create Facebook App</h2>
+      <div class="guide-step">
+        <p>1. Go to <a href="https://developers.facebook.com/" target="_blank">Facebook Developers</a>.</p>
+        <p>2. Create a <strong>Business</strong> or <strong>Consumer</strong> app.</p>
+        <p>3. Add <strong>Facebook Login for Business</strong> product.</p>
+      </div>
+
+      <h2><span class="step-num">2</span> Get Page ID</h2>
+      <div class="guide-step">
+        <p>Go to your Page's <strong>About</strong> section -> <strong>Page Transparency</strong> to find your numeric Page ID.</p>
+      </div>
+
+      <h2><span class="step-num">3</span> Get Access Token</h2>
+      <div class="guide-step">
+        <p>1. Open <a href="https://developers.facebook.com/tools/explorer/" target="_blank">Graph API Explorer</a>.</p>
+        <p>2. Select your App and Page.</p>
+        <p>3. Add permissions: <code>pages_manage_posts</code>, <code>pages_show_list</code>.</p>
+        <p>4. Generate and copy the token.</p>
+      </div>
     </div>
   </div>
 
