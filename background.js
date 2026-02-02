@@ -378,19 +378,16 @@ chrome.action.onClicked.addListener((tab) => {
             console.error('Error opening sidePanel:', err);
           });
       } else {
-        // If not on Twitter/X, navigate to X.com first
-        chrome.tabs.update(tab.id, { url: 'https://x.com' }, () => {
-          // Wait a bit for the page to load, then open sidebar
-          setTimeout(() => {
-            chrome.sidePanel.open({ windowId: tab.windowId })
-              .then(() => {
-                chrome.storage.local.set({ sidebarOpen: true });
-              })
-              .catch((err) => {
-                // Ignore errors related to user closing panel early
-              });
-          }, 1000);
-        });
+        // If not on Twitter/X: open sidebar first (while user gesture is active), then open X in a new tab
+        chrome.sidePanel.open({ windowId: tab.windowId })
+          .then(() => {
+            chrome.storage.local.set({ sidebarOpen: true });
+            // Open X.com in a new tab in the same window
+            chrome.tabs.create({ url: 'https://x.com', active: true, windowId: tab.windowId });
+          })
+          .catch((err) => {
+            console.error('Error opening sidePanel:', err);
+          });
       }
     } else {
       console.error('SidePanel API is not available. Make sure you are using a compatible browser version.');
