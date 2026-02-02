@@ -26,8 +26,8 @@
     "default_path": "sidebar.html"
   },
   "icons": {
-    "16": "logo.png",
-    "48": "logo.png",
-    "128": "logo.png"
+    "16": "logofront.png",
+    "48": "logofront.png",
+    "128": "logofront.png"
   }
 }

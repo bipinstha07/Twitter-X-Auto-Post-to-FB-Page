@@ -10,7 +10,7 @@ A Chrome extension that adds a "Preview" button to each tweet on Twitter/X, allo
 - ✅ Works with Twitter's dynamic content loading (SPA)
 - ✅ Modern, minimal sidebar UI
 - ✅ Post directly to Facebook from the sidebar
-- ✅ Automatic credit attribution (@username)
+- ✅ Optional credit attribution (@username) — enable in Settings if desired
 
 ## Installation
 

@@ -122,7 +122,7 @@ function handleContextInvalidation() {
   });
 }
 
-function extractTweetData(tweet) {
+function extractTweetData(tweet, options) {
   let text =
     tweet.querySelector('[data-testid="tweetText"]')?.innerText || "";
 
@@ -171,8 +171,9 @@ function extractTweetData(tweet) {
     }
   }
 
-  // Append credit if username found
-  if (username) {
+  // Append credit only if setting is enabled (default: off)
+  const showCredit = typeof options?.showCredit === 'boolean' ? options.showCredit : false;
+  if (showCredit && username) {
     text += `\n\nCredit from X.com: @${username}`;
   }
 
@@ -333,9 +334,12 @@ function injectButton(tweet) {
     btn.style.cursor = "default";
 
     try {
-      let data = extractTweetData(tweet);
-      const hasVideo = !!data.video;
-      console.log("Extracted tweet data:", data, "Has video:", hasVideo);
+      chrome.storage.local.get(['showCredit'], (storageResult) => {
+        try {
+          const showCredit = storageResult.showCredit === true;
+          let data = extractTweetData(tweet, { showCredit });
+          const hasVideo = !!data.video;
+          console.log("Extracted tweet data:", data, "Has video:", hasVideo);
       
       // 1. IMMEDIATELY send text/images to sidebar
       chrome.runtime.sendMessage(
@@ -390,7 +394,14 @@ function injectButton(tweet) {
             }, 2000);
           }
         });
-      }
+          }
+        } catch (error) {
+          console.error("Error extracting tweet data:", error);
+          btn.innerText = "Error";
+          btn.style.background = "#ef4444";
+          btn.disabled = false;
+        }
+      });
     } catch (error) {
       console.error("Error extracting tweet data:", error);
       btn.innerText = "Error";

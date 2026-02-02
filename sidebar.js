@@ -8,7 +8,7 @@ chrome.storage.local.set({ sidebarOpen: true });
 
 // Load initial state
 function loadInitialState() {
-  chrome.storage.local.get(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId', 'fbPageId', 'fbAccessToken'], (result) => {
+  chrome.storage.local.get(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId', 'fbPageId', 'fbAccessToken', 'showCredit'], (result) => {
     // Check for credentials first
     if (result.fbPageId && result.fbAccessToken) {
       fbCredentialsSet = true;
@@ -33,6 +33,10 @@ function loadInitialState() {
     } else {
       displayTweetData(null);
     }
+
+    // Show credit setting (default: off)
+    const showCreditEl = document.getElementById('showCredit');
+    if (showCreditEl) showCreditEl.checked = result.showCredit === true;
   });
 }
 
@@ -92,6 +96,12 @@ document.getElementById('closeGuideBtn')?.addEventListener('click', () => {
   showView('configView');
 });
 
+// Save "Show credit" when checkbox is toggled (no need to click Save Credentials)
+document.getElementById('showCredit')?.addEventListener('change', () => {
+  const showCredit = document.getElementById('showCredit').checked;
+  chrome.storage.local.set({ showCredit });
+});
+
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
   const pageId = document.getElementById('fbPageId').value.trim();
   const token = document.getElementById('fbAccessToken').value.trim();
@@ -105,9 +115,11 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
   btn.disabled = true;
   btn.innerText = 'Saving...';
 
+  const showCredit = document.getElementById('showCredit')?.checked === true;
   chrome.storage.local.set({
     fbPageId: pageId,
-    fbAccessToken: token
+    fbAccessToken: token,
+    showCredit: showCredit
   }, () => {
     fbCredentialsSet = true;
     
