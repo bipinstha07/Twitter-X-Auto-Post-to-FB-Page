@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "X post Auto to Fb",
+  "name": "X to FB Auto",
   "version": "1.0",
   "description": "Collect X posts and automatically post them to Facebook",
   "permissions": ["activeTab", "scripting", "storage", "sidePanel", "downloads", "unlimitedStorage"],
