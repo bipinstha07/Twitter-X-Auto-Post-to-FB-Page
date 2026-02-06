@@ -2,13 +2,14 @@
 let uploadedVideoData = null;
 let currentPostIdForUpload = null;
 let fbCredentialsSet = false;
+let fbGroupsList = [];
 
 // Mark sidebar as open and establish heartbeat
 chrome.storage.local.set({ sidebarOpen: true });
 
 // Load initial state
 function loadInitialState() {
-  chrome.storage.local.get(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId', 'fbPageId', 'fbAccessToken', 'showCredit'], (result) => {
+  chrome.storage.local.get(['lastSubmittedTweet', 'uploadedVideoData', 'uploadedVideoPostId', 'fbPageId', 'fbAccessToken', 'showCredit', 'fbGroups'], (result) => {
     // Check for credentials first
     if (result.fbPageId && result.fbAccessToken) {
       fbCredentialsSet = true;
@@ -21,6 +22,11 @@ function loadInitialState() {
       document.getElementById('backBtn').style.display = 'none';
       showView('configView');
     }
+
+    fbGroupsList = result.fbGroups || [];
+    renderConfigGroupsList();
+    renderMainPostToGroups();
+    initMainPostToGroupsListeners();
 
     if (result.uploadedVideoPostId) {
       currentPostIdForUpload = result.uploadedVideoPostId;
@@ -45,9 +51,12 @@ function showView(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
   
-  // Toggle navigation buttons visibility
-  document.getElementById('settingsBtn').style.display = viewId === 'configView' ? 'none' : 'block';
-  document.getElementById('homeBtn').style.display = viewId === 'mainView' ? 'none' : 'block';
+  // Show all nav buttons on every tab: Home, FB Groups, Settings
+  document.getElementById('homeBtn').style.display = 'block';
+  document.getElementById('groupsBtn').style.display = 'block';
+  document.getElementById('settingsBtn').style.display = 'block';
+  if (viewId === 'groupsView') renderConfigGroupsList();
+  if (viewId === 'mainView') renderMainPostToGroups();
 }
 
 // Navigation Event Listeners
@@ -57,6 +66,10 @@ document.getElementById('homeBtn').addEventListener('click', () => {
   } else {
     showView('configView');
   }
+});
+
+document.getElementById('groupsBtn').addEventListener('click', () => {
+  showView('groupsView');
 });
 
 document.getElementById('settingsBtn').addEventListener('click', () => {
@@ -69,6 +82,10 @@ document.getElementById('backBtn').addEventListener('click', () => {
   if (fbCredentialsSet) {
     showView('mainView');
   }
+});
+
+document.getElementById('groupsBackBtn').addEventListener('click', () => {
+  showView(fbCredentialsSet ? 'mainView' : 'configView');
 });
 
 // Toggle Token Visibility
@@ -138,6 +155,113 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
   });
 });
 
+// Normalize Facebook group URL for storage and opening
+function normalizeGroupUrl(url) {
+  const s = (url || '').trim();
+  if (!s) return '';
+  try {
+    const u = new URL(s);
+    const host = u.hostname.replace(/^www\./, '');
+    if ((host === 'facebook.com' || host === 'm.facebook.com') && u.pathname.indexOf('/groups/') === 0) {
+      const path = u.pathname.replace(/\/$/, '');
+      return u.origin + path;
+    }
+  } catch (_) {}
+  return '';
+}
+
+function parseGroupIdFromLink(link) {
+  if (!link || typeof link !== 'string') return null;
+  const trimmed = link.trim();
+  const match = trimmed.match(/facebook\.com\/groups\/(\d+)/i) || trimmed.match(/fb\.com\/groups\/(\d+)/i) || trimmed.match(/^(\d+)$/);
+  return match ? match[1] : null;
+}
+
+function renderConfigGroupsList() {
+  const listEl = document.getElementById('fbGroupsList');
+  if (!listEl) return;
+  if (fbGroupsList.length === 0) {
+    listEl.innerHTML = '<li class="fb-groups-empty">No groups added. Add a group link above.</li>';
+    return;
+  }
+  listEl.innerHTML = fbGroupsList.map((g) => `
+    <li>
+      <span class="group-name-ref" data-group-link="${escapeHtml(g.link)}" title="Click to edit name">${g.name ? escapeHtml(g.name) : '—'}</span>
+      <a href="${escapeHtml(g.link)}" target="_blank" rel="noopener" class="group-link" title="${escapeHtml(g.link)}">${escapeHtml(g.id)}</a>
+      <button type="button" class="remove-group" data-group-link="${escapeHtml(g.link)}">Remove</button>
+    </li>
+  `).join('');
+  listEl.querySelectorAll('.remove-group').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const link = btn.getAttribute('data-group-link');
+      fbGroupsList = fbGroupsList.filter((g) => g.link !== link);
+      chrome.storage.local.set({ fbGroups: fbGroupsList });
+      renderConfigGroupsList();
+    });
+  });
+  listEl.querySelectorAll('.group-name-ref').forEach((span) => {
+    span.addEventListener('click', (e) => {
+      e.preventDefault();
+      const link = span.getAttribute('data-group-link');
+      const g = fbGroupsList.find((x) => x.link === link);
+      if (!g) return;
+      const currentName = g.name || '';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'group-name-edit';
+      input.value = currentName;
+      input.placeholder = 'Name for reference';
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+      let onKey;
+      input.addEventListener('blur', function onBlur() {
+        const newName = input.value.trim() || null;
+        g.name = newName;
+        chrome.storage.local.set({ fbGroups: fbGroupsList });
+        input.removeEventListener('blur', onBlur);
+        input.removeEventListener('keydown', onKey);
+        renderConfigGroupsList();
+      });
+      onKey = function (ev) {
+        if (ev.key === 'Enter') {
+          input.blur();
+        } else if (ev.key === 'Escape') {
+          input.value = currentName;
+          input.blur();
+        }
+      };
+      input.addEventListener('keydown', onKey);
+    });
+  });
+}
+
+document.getElementById('fbAddGroupBtn').addEventListener('click', () => {
+  const nameInput = document.getElementById('fbGroupNameInput');
+  const linkInput = document.getElementById('fbGroupLinkInput');
+  const raw = linkInput?.value?.trim();
+  if (!raw) {
+    alert('Please enter a group link (e.g. https://www.facebook.com/groups/123456789/)');
+    return;
+  }
+  const link = normalizeGroupUrl(raw);
+  if (!link) {
+    alert('Please enter a valid Facebook group URL (e.g. https://www.facebook.com/groups/123456789)');
+    return;
+  }
+  if (fbGroupsList.some((g) => g.link === link)) {
+    alert('This group is already in the list.');
+    return;
+  }
+  const id = parseGroupIdFromLink(link) || link;
+  const name = nameInput?.value?.trim() || null;
+  fbGroupsList.push({ id, link, name: name || `Group ${id}` });
+  chrome.storage.local.set({ fbGroups: fbGroupsList });
+  renderConfigGroupsList();
+  linkInput.value = '';
+  if (nameInput) nameInput.value = '';
+});
+
 // Establish a connection to background script to detect when sidebar is closed
 const port = chrome.runtime.connect({ name: "sidebar" });
 
@@ -147,6 +271,83 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+let mainPostToGroupsListenersInitialized = false;
+
+function renderMainPostToGroups() {
+  const checklistEl = document.getElementById('mainFbGroupsChecklist');
+  if (!checklistEl) return;
+  if (fbGroupsList.length === 0) {
+    checklistEl.innerHTML = '<div class="fb-groups-empty" style="padding: 8px 0; color: var(--text-gray); font-size: 12px;">No groups added. Add groups in <strong>FB Groups</strong>.</div>';
+    return;
+  }
+  const groupsCheckboxes = fbGroupsList.map((g) => `
+    <label class="fb-group-check-item">
+      <input type="checkbox" class="fb-group-check" data-group-link="${escapeHtml(g.link)}" checked>
+      <span class="fb-group-check-label">${escapeHtml(g.name || g.id)}</span>
+    </label>
+  `).join('');
+  checklistEl.innerHTML = groupsCheckboxes;
+}
+
+function initMainPostToGroupsListeners() {
+  if (mainPostToGroupsListenersInitialized) return;
+  mainPostToGroupsListenersInitialized = true;
+  const mainChecklistEl = document.getElementById('mainFbGroupsChecklist');
+  const mainMarkAllBtn = document.getElementById('mainMarkAllGroupsBtn');
+  const mainUnmarkAllBtn = document.getElementById('mainUnmarkAllGroupsBtn');
+  const mainShareBtn = document.getElementById('mainShareToGroupsBtn');
+  if (mainMarkAllBtn && mainChecklistEl) {
+    mainMarkAllBtn.addEventListener('click', () => {
+      mainChecklistEl.querySelectorAll('.fb-group-check').forEach((cb) => { cb.checked = true; });
+    });
+  }
+  if (mainUnmarkAllBtn && mainChecklistEl) {
+    mainUnmarkAllBtn.addEventListener('click', () => {
+      mainChecklistEl.querySelectorAll('.fb-group-check').forEach((cb) => { cb.checked = false; });
+    });
+  }
+  if (mainShareBtn && mainChecklistEl) {
+    mainShareBtn.addEventListener('click', () => {
+      const linkInput = document.getElementById('mainGroupPostLinkInput');
+      const linkToPaste = linkInput ? linkInput.value.trim() : '';
+      const currentText = document.getElementById('tweetTextEdit')?.value || '';
+      const checked = mainChecklistEl.querySelectorAll('.fb-group-check:checked');
+      const groupUrls = Array.from(checked).map((cb) => cb.getAttribute('data-group-link')).filter(Boolean);
+      const statusEl = document.getElementById('mainShareToGroupsStatus');
+      if (!linkToPaste) {
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Enter a link to paste in groups.'; statusEl.style.color = '#f4212e'; }
+        return;
+      }
+      if (groupUrls.length === 0) {
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Select at least one group.'; statusEl.style.color = '#f4212e'; }
+        return;
+      }
+      if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Opening group tabs...'; statusEl.style.color = '#536471'; }
+      mainShareBtn.disabled = true;
+      chrome.runtime.sendMessage({
+        action: 'postToAll',
+        groups: groupUrls,
+        link: linkToPaste,
+        text: currentText
+      }, (res) => {
+        mainShareBtn.disabled = false;
+        if (statusEl) {
+          if (chrome.runtime.lastError) {
+            statusEl.textContent = 'Error: ' + chrome.runtime.lastError.message;
+            statusEl.style.color = '#f4212e';
+          } else if (res && res.ok) {
+            statusEl.textContent = 'Opened ' + res.count + ' group tab(s).';
+            statusEl.style.color = '#0966FF';
+          } else {
+            statusEl.textContent = (res && res.error) ? res.error : 'Something went wrong.';
+            statusEl.style.color = '#f4212e';
+          }
+        }
+      });
+    });
+  }
 }
 
 function displayTweetData(tweetData) {
@@ -242,7 +443,7 @@ function displayTweetData(tweetData) {
                 <span style="font-size: 10px;">🎥</span>
                 <span style="font-size: 10px; font-weight: bold; color: var(--text-main);">Video Source</span>
               </div>
-              <span id="videoTypeTag" style="font-size: 8px; color: white; background: ${isDirect ? '#00ba7c' : (isData ? '#1d9bf0' : '#f4212e')}; padding: 1px 4px; border-radius: 3px; font-weight: 800;">
+              <span id="videoTypeTag" style="font-size: 8px; color: white; background: ${isDirect ? '#00d4be' : (isData ? '#1d9bf0' : '#f4212e')}; padding: 1px 4px; border-radius: 3px; font-weight: 800;">
                 ${isDirect ? 'DIRECT' : (isData ? 'DATA' : 'BLOB')}
               </span>
             </div>
@@ -279,6 +480,7 @@ function displayTweetData(tweetData) {
         <button class="btn-facebook" id="postFbBtn">Post to Facebook</button>
       </div>
       <div id="fbStatus" style="display: none;"></div>
+      <div id="fbPostInfo" class="fb-post-info" style="display: none;"></div>
     </div>
   `;
 
@@ -367,16 +569,37 @@ function displayTweetData(tweetData) {
     }, (response) => {
       btn.disabled = false;
       btn.innerText = 'Post to Facebook';
-      
+      const postInfoEl = document.getElementById('fbPostInfo');
+
       if (response && response.success) {
         status.innerText = 'Successfully posted!';
         status.style.background = 'rgba(0, 186, 124, 0.1)';
-        status.style.color = '#00ba7c';
+        status.style.color = '#00d4be';
         setTimeout(() => { status.style.display = 'none'; }, 5000);
+
+        if (postInfoEl) {
+          postInfoEl.style.display = 'block';
+          let inner = '';
+          if (response.feedPost) {
+            const fp = response.feedPost;
+            const permalink = fp.permalink_url || '';
+            // Update main "Post to groups" link field with Facebook post link
+            const mainLinkInput = document.getElementById('mainGroupPostLinkInput');
+            if (mainLinkInput) mainLinkInput.value = permalink;
+            inner += `
+              <div class="fb-post-info-inner">
+                <div class="fb-post-info-label">Posted on Facebook</div>
+                <a href="${escapeHtml(permalink)}" target="_blank" rel="noopener" class="fb-permalink">View post →</a>
+              </div>
+            `;
+          }
+          postInfoEl.innerHTML = inner || '<div class="fb-post-info-inner"><div class="fb-post-info-label">Posted</div></div>';
+        }
       } else {
         status.innerText = 'Error: ' + (response?.error || 'Unknown error');
         status.style.background = 'rgba(244, 33, 46, 0.1)';
         status.style.color = '#f4212e';
+        if (postInfoEl) postInfoEl.style.display = 'none';
       }
     });
   });

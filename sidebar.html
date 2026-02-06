@@ -13,7 +13,7 @@
       --text-main: #0f1419;
       --text-gray: #536471;
       --border-color: #eff3f4;
-      --success-green: #00ba7c;
+      --success-green: #00d4be;
       --error-red: #f4212e;
     }
 
@@ -195,6 +195,91 @@
       border-radius: 8px;
     }
 
+    .fb-post-info {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #e0f7f5;
+      border: 1px solid rgba(0, 212, 190, 0.4);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    .fb-post-info-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .fb-post-info-label {
+      font-weight: 700;
+      color: #00a896;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .fb-post-id {
+      word-break: break-all;
+      color: var(--text-main);
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .fb-permalink {
+      color: #1877f2;
+      font-weight: 600;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .fb-permalink:hover {
+      text-decoration: underline;
+    }
+    .fb-group-post-link-input {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-family: monospace;
+      border: 1px solid rgba(0, 168, 150, 0.5);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text-main);
+      margin-bottom: 2px;
+      word-break: break-all;
+    }
+    .fb-group-post-link-input:focus {
+      outline: none;
+      border-color: #00a896;
+      box-shadow: 0 0 0 2px rgba(0, 168, 150, 0.15);
+    }
+
+    .groups-section label { display: block; margin-bottom: 4px; }
+    .groups-add-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .groups-add-row input { flex: 1; }
+    .groups-name-input { width: 100%; margin-bottom: 4px; }
+    .btn-add-group { padding: 8px 14px; font-size: 12px; font-weight: 600; background: var(--primary-blue); color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+    .btn-add-group:hover { opacity: 0.9; }
+    .fb-groups-list { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    .fb-groups-list li { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; margin-bottom: 4px; background: #f0f2f5; border-radius: 6px; font-size: 11px; }
+    .fb-groups-list .group-name-ref { flex: 1; min-width: 0; color: var(--text-main); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    .fb-groups-list .group-name-ref:hover { color: var(--primary-blue); }
+    .fb-groups-list .group-link { margin-left: 8px; color: var(--primary-blue); text-decoration: none; font-size: 11px; flex-shrink: 0; }
+    .fb-groups-list .group-link:hover { text-decoration: underline; }
+    .fb-groups-list .group-name-edit { margin-right: 8px; padding: 2px 6px; font-size: 11px; border: 1px solid var(--primary-blue); border-radius: 4px; width: 100px; max-width: 140px; flex: 1; min-width: 0; }
+    .fb-groups-list .remove-group { margin-left: 8px; padding: 2px 6px; font-size: 10px; background: #f4212e; color: white; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0; }
+    .fb-groups-list .remove-group:hover { opacity: 0.9; }
+    .fb-groups-dropdown-wrap { margin-top: 12px; margin-bottom: 4px; }
+    .fb-groups-dropdown-wrap label { font-size: 12px; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 6px; }
+    .fb-groups-select { width: 100%; min-height: 72px; padding: 6px; font-size: 12px; border: 1px solid #d0d7de; border-radius: 6px; background: #fafafa; }
+    .fb-groups-select option { padding: 4px 0; }
+    .fb-groups-list li.fb-groups-empty { background: transparent; color: var(--text-gray); font-style: italic; }
+    .fb-group-results { margin-top: 8px; font-size: 11px; color: var(--text-main); }
+    .fb-post-to-groups-wrap { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+    .fb-post-to-groups-always { margin-top: 16px; padding: 14px; background: var(--bg-gray); border: 1px solid var(--border-color); border-radius: 10px; }
+    .fb-post-to-groups-wrap .fb-groups-select { margin-top: 4px; }
+    .fb-groups-checklist { margin-top: 6px; max-height: 240px; overflow-y: auto; }
+    .fb-group-check-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 4px; background: #f0f2f5; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .fb-group-check-item:hover { background: #e4e6eb; }
+    .fb-group-check { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; accent-color: var(--primary-blue); }
+    .fb-group-check-label { flex: 1; min-width: 0; word-break: break-all; }
+    .fb-mark-unmark-btn { background: none; border: none; padding: 0; font-size: 11px; font-weight: 600; color: var(--primary-blue); cursor: pointer; }
+    .fb-mark-unmark-btn:hover { text-decoration: underline; }
+
     .upload-section {
       margin-bottom: 16px;
       padding: 12px;
@@ -236,21 +321,28 @@
       border-radius: 10px;
     }
 
-    /* Navigation Buttons */
-    .nav-buttons {
-      position: absolute;
-      top: 14px;
-      right: 14px;
+    /* Top header: nav buttons on the right */
+    .top-header {
       display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 10px 0 14px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .nav-buttons {
+      display: flex;
+      align-items: center;
       gap: 4px;
-      z-index: 100;
     }
 
     .nav-btn {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 4px 8px;
+      padding: 6px 10px;
       color: var(--text-gray);
       font-size: 12px;
       font-weight: 500;
@@ -264,32 +356,6 @@
     .nav-btn:hover {
       color: var(--primary-blue);
       background-color: #e8f5fd;
-    }
-
-    /* Logo Header */
-    .logo-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 0;
-      margin-bottom: 10px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .logo-header img {
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
-      margin-bottom: 12px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-
-    .logo-header h1 {
-      margin: 0;
-      font-size: 20px;
-      color: var(--text-main);
     }
 
     /* Views */
@@ -430,8 +496,8 @@
     }
 
     .status-badge.connected {
-      background: #e7f8f2;
-      color: #00ba7c;
+      background: #e0f7f5;
+      color: #00d4be;
     }
 
     /* Guide View Styles */
@@ -552,14 +618,12 @@
   </style>
 </head>
 <body>  
-  <div class="nav-buttons">
-    <button id="homeBtn" class="nav-btn" title="Go to Home">Home</button>
-    <button id="settingsBtn" class="nav-btn" title="Facebook Settings">Settings</button>
-  </div>
-
-  <div class="logo-header">
-    <img src="logo.png" alt="Logo">
-    <h1>X to FB Auto</h1>
+  <div class="top-header">
+    <div class="nav-buttons">
+      <button id="homeBtn" class="nav-btn" title="Go to Home">Home</button>
+      <button id="groupsBtn" class="nav-btn" title="Facebook Groups">FB Groups</button>
+      <button id="settingsBtn" class="nav-btn" title="Facebook Settings">Settings</button>
+    </div>
   </div>
 
   <!-- Main Content View -->
@@ -567,6 +631,20 @@
   
     <div id="tweetDisplay" class="no-data">
       No tweets collected yet.<br>Click "Preview" on any post to start.
+    </div>
+
+    <!-- Post to groups (always visible) -->
+    <div id="postToGroupsSection" class="fb-post-to-groups-wrap fb-post-to-groups-always">
+      <div class="fb-post-info-label">Post to groups</div>
+      <div class="section-label" style="margin-top: 4px;">Link to paste in groups (Facebook post link)</div>
+      <input type="text" id="mainGroupPostLinkInput" class="fb-group-post-link-input" value="" placeholder="Paste any link to share in groups">
+      <div class="fb-groups-mark-row" style="display: flex; gap: 12px; margin: 8px 0 6px; font-size: 11px;">
+        <button type="button" id="mainMarkAllGroupsBtn" class="fb-mark-unmark-btn">Mark all</button>
+        <button type="button" id="mainUnmarkAllGroupsBtn" class="fb-mark-unmark-btn">Unmark all</button>
+      </div>
+      <div id="mainFbGroupsChecklist" class="fb-groups-checklist"></div>
+      <button type="button" id="mainShareToGroupsBtn" class="btn-add-group" style="margin-top: 8px;">Open groups & fill post</button>
+      <div id="mainShareToGroupsStatus" style="display: none; margin-top: 6px; font-size: 11px;"></div>
     </div>
   </div>
 
@@ -619,6 +697,25 @@
         <p class="settings-about">Your credentials are stored locally. For support or questions, email the address above.</p>
         <p class="settings-copyright">© 2025 X to FB Auto. All rights reserved.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- FB Groups View -->
+  <div id="groupsView" class="view">
+    <div class="config-panel">
+      <h2>Facebook Groups</h2>
+      <p class="setup-desc">Add group links to share your Page posts with. After posting to your Page, you can select groups in the dropdown to share the post there.</p>
+      <div class="form-group groups-section">
+        <label for="fbGroupNameInput">Group name (optional)</label>
+        <input type="text" id="fbGroupNameInput" placeholder="e.g. Tech Community" class="groups-name-input">
+        <label for="fbGroupLinkInput" style="margin-top: 10px; display: block;">Group URL</label>
+        <div class="groups-add-row">
+          <input type="text" id="fbGroupLinkInput" placeholder="https://www.facebook.com/groups/123456789/">
+          <button type="button" id="fbAddGroupBtn" class="btn-add-group">Add</button>
+        </div>
+        <ul id="fbGroupsList" class="fb-groups-list"></ul>
+      </div>
+      <button id="groupsBackBtn" class="btn-clear" style="margin-top: 16px; width: 100%; font-size: 13px;">← Back to Home</button>
     </div>
   </div>
 

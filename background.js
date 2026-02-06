@@ -63,6 +63,18 @@ async function getFBCredentials() {
   });
 }
 
+// After posting, fetch the page feed to get the new post's id and permalink_url
+async function fetchPageFeedLatestPost(pageId, accessToken) {
+  const url = `${FB_GRAPH_API_URL}${pageId}/feed?fields=id,permalink_url,created_time&limit=1&access_token=${accessToken}`;
+  const response = await fetch(url);
+  const json = await response.json();
+  if (!response.ok || !json.data || json.data.length === 0) {
+    return null;
+  }
+  const first = json.data[0];
+  return { id: first.id, permalink_url: first.permalink_url, created_time: first.created_time };
+}
+
 // Post to Facebook logic
 async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
   console.log("SENDING TO FACEBOOK >>>", { message, imageUrls, videoUrl, videoIsBlob });
@@ -104,7 +116,9 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
       }
 
       console.log("Facebook Video Post Successful:", data);
-      return { success: true, data };
+      await new Promise(r => setTimeout(r, 1200));
+      const feedPost = await fetchPageFeedLatestPost(pageId, accessToken);
+      return { success: true, data, feedPost };
     }
 
     // Case 2: Images or Text-only post
@@ -122,8 +136,10 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "Failed to post text to Facebook");
-      return { success: true, data };
-    } 
+      await new Promise(r => setTimeout(r, 1200));
+      const feedPost = await fetchPageFeedLatestPost(pageId, accessToken);
+      return { success: true, data, feedPost };
+    }
     
     if (imageUrls.length === 1) {
       // Case 2: Single photo post
@@ -140,7 +156,9 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "Failed to post photo to Facebook");
-      return { success: true, data };
+      await new Promise(r => setTimeout(r, 1200));
+      const feedPost = await fetchPageFeedLatestPost(pageId, accessToken);
+      return { success: true, data, feedPost };
     }
 
     // Case 3: Multiple photos post
@@ -194,7 +212,9 @@ async function postToFacebook(message, imageUrls, videoUrl, videoIsBlob) {
     }
 
     console.log("Multi-photo Facebook Post Successful:", finalData);
-    return { success: true, data: finalData };
+    await new Promise(r => setTimeout(r, 1200));
+    const feedPost = await fetchPageFeedLatestPost(pageId, accessToken);
+    return { success: true, data: finalData, feedPost };
     
   } catch (error) {
     console.error("Error in postToFacebook:", error);
@@ -314,15 +334,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "POST_TO_FACEBOOK") {
+    const payload = message.payload;
     postToFacebook(
-      message.payload.message, 
-      message.payload.imageUrls, 
-      message.payload.videoUrl,
-      message.payload.videoIsBlob
+      payload.message,
+      payload.imageUrls,
+      payload.videoUrl,
+      payload.videoIsBlob
     )
-      .then(result => sendResponse(result))
+      .then((result) => {
+        sendResponse(result);
+      })
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true; // Keep channel open for async response
+  }
+
+  if (message.action === "postToAll") {
+    const groups = message.groups || [];
+    const link = message.link || "";
+    const text = message.text || "";
+    const payload = { link, text };
+    if (groups.length === 0) {
+      sendResponse({ ok: false, error: "No groups" });
+      return true;
+    }
+    groups.forEach((url) => {
+      chrome.tabs.create({ url }, (tab) => {
+        if (tab && tab.id) pendingTabs.set(tab.id, payload);
+      });
+    });
+    sendResponse({ ok: true, count: groups.length });
+    return true;
   }
 
   if (message.type === "SUBMIT_TWEET") {
@@ -360,6 +401,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Return true to indicate we will send a response asynchronously
     return true;
   }
+
+  if (message.action === "closeGroupTabInSeconds") {
+    const seconds = Math.max(1, Math.min(60, Number(message.seconds) || 5));
+    if (sender.tab && sender.tab.id) {
+      setTimeout(() => {
+        chrome.tabs.remove(sender.tab.id, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("Error closing group tab:", chrome.runtime.lastError.message);
+          }
+        });
+      }, seconds * 1000);
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+});
+
+// --- Open group tabs and fill post (no Groups API; open tabs and inject link + text) ---
+const pendingTabs = new Map();
+
+function isGroupUrl(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    return (host === "facebook.com" || host === "m.facebook.com") && u.pathname.indexOf("/groups/") === 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+const GROUP_TAB_MAX_LIFETIME_MS = 50000; // Close tab after 50s if not closed earlier (e.g. by 5s-after-post)
+
+function sendFillToTab(tabId, payload) {
+  function trySend(attempt) {
+    if (attempt > 25) return;
+    chrome.tabs.sendMessage(tabId, { action: "fillPost", ...payload }, () => {
+      if (chrome.runtime.lastError) {
+        setTimeout(() => trySend(attempt + 1), 800);
+      }
+    });
+  }
+  // Wait for group feed and composer to render
+  setTimeout(() => trySend(0), 9000);
+
+  // Fallback: close this tab after 50 seconds whether fill/post is done or not
+  setTimeout(() => {
+    chrome.tabs.remove(tabId, () => {
+      if (chrome.runtime.lastError) {
+        // Tab may already be closed (e.g. by 5s-after-post)
+      }
+    });
+  }, GROUP_TAB_MAX_LIFETIME_MS);
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== "complete" || !tab.url) return;
+  const pending = pendingTabs.get(tabId);
+  if (!pending || !isGroupUrl(tab.url)) return;
+  pendingTabs.delete(tabId);
+  sendFillToTab(tabId, pending);
 });
 
 // Open sidebar when extension icon is clicked

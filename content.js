@@ -329,7 +329,7 @@ function injectButton(tweet) {
 
     btn.disabled = true;
     btn.innerText = "Previewed ✓";
-    btn.style.background = "#10b981"; // Success green
+    btn.style.background = "#00d4be"; // Success green
     btn.style.opacity = "1";
     btn.style.cursor = "default";
 
@@ -351,7 +351,7 @@ function injectButton(tweet) {
           console.log("Immediate text preview response:", response);
           if (response && response.success) {
             btn.innerText = "Previewed ✓";
-            btn.style.background = "#10b981"; // Success green
+            btn.style.background = "#00d4be"; // Success green
             btn.style.opacity = "1";
             
             // Re-enable the button after a delay so it can be clicked again
