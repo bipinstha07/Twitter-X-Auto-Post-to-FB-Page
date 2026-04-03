@@ -2,15 +2,17 @@
 
 A Chrome extension that adds a "Preview" button to each tweet on Twitter/X, allowing you to collect post data (text and images) and post them to Facebook.
 
+Demo: https://youtu.be/p1ZEMJSoh50?si=-KTSPFZ9X0s00a5b
+
 ## Features
 
-- ✅ Automatically injects a "Preview" button on every tweet visible on the page (skips posts with videos)
-- ✅ Extracts tweet text and images
-- ✅ Saves data locally in organized folders
-- ✅ Works with Twitter's dynamic content loading (SPA)
-- ✅ Modern, minimal sidebar UI
-- ✅ Post directly to Facebook from the sidebar
-- ✅ Optional credit attribution (@username) — enable in Settings if desired
+- Automatically injects a "Preview" button on every tweet visible on the page (skips posts with videos)
+  Extracts tweet text and images
+- Saves data locally in organized folders
+- Works with Twitter's dynamic content loading (SPA)
+- Modern, minimal sidebar UI
+- Post directly to Facebook from the sidebar
+- Optional credit attribution (@username) — enable in Settings if desired
 
 ## Installation
 
